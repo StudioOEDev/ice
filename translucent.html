@@ -11,7 +11,7 @@
 			font-size: 13px;
 			text-align: center;
 
-			background-color: #fff;
+			background-color: #000;
 			margin: 0px;
 			overflow: hidden;
 	  }
@@ -30,12 +30,11 @@
 		<br/>Fast subsurface scattering in Blinn-Phong shading demo<br/>
 		[Thanks for the art support from <a href="https://github.com/shaochun" target="_blank" rel="noopener">Shaochun Lin</a>]
 	</div>
-	<script src="js/build/three.js"></script>
+	<script src="../build/three.js"></script>
 	<script src="js/controls/OrbitControls.js"></script>
 
 	<script src="js/WebGL.js"></script>
 	<script src="js/libs/stats.min.js"></script>
-	<script src="js/libs/inflate.min.js"></script>
 	<script src="js/libs/dat.gui.min.js"></script>
 	<script src="js/loaders/FBXLoader.js"></script>
 	<script src="js/ShaderTranslucent.js"></script>
@@ -69,30 +68,23 @@
 
 			scene.add( new THREE.AmbientLight( 0x888888 ) );
 
-			var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.2 );
+			var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.03 );
 			directionalLight.position.set( 0.0, 0.5, 0.5 ).normalize();
 			scene.add( directionalLight );
 
-			var pointLight1 = new THREE.Mesh( new THREE.SphereBufferGeometry( 1, 1, 1 ), new THREE.MeshBasicMaterial( { color: 0x888888 } ) );
-			pointLight1.add( new THREE.PointLight( 0x888888, 1.0, 300 ) );
+			var pointLight1 = new THREE.Mesh( new THREE.SphereBufferGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0x888888 } ) );
+			pointLight1.add( new THREE.PointLight( 0x888888, 7.0, 300 ) );
 			scene.add( pointLight1 );
 			pointLight1.position.x = 0;
-			pointLight1.position.y =  250;
+			pointLight1.position.y = - 50;
 			pointLight1.position.z = 350;
 
-			var pointLight2 = new THREE.Mesh( new THREE.SphereBufferGeometry( 1, 1, 1 ), new THREE.MeshBasicMaterial( { color: 0x888888 } ) );
-			pointLight2.add( new THREE.PointLight( 0x888888, 1.0, 500 ) );
+			var pointLight2 = new THREE.Mesh( new THREE.SphereBufferGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0x888800 } ) );
+			pointLight2.add( new THREE.PointLight( 0x888800, 1.0, 500 ) );
 			scene.add( pointLight2 );
 			pointLight2.position.x = - 100;
-			pointLight2.position.y = 220;
+			pointLight2.position.y = 20;
 			pointLight2.position.z = - 260;
-
-            // BACKGRUND
-            var geometry = new THREE.SphereGeometry( 2000, 10, 100 );
-            var material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
-            var plane = new THREE.Mesh( geometry, material );
-            //plane.translateZ(-500)
-            scene.add( plane );
 
 			renderer = new THREE.WebGLRenderer( { antialias: true } );
 			renderer.setPixelRatio( window.devicePixelRatio );
@@ -118,8 +110,8 @@
 		function initMaterial() {
 
 			var loader = new THREE.TextureLoader();
-			var imgTexture = loader.load( 'models/fbx/icetex3.jpg' );
-			var thicknessTexture = loader.load( 'models/fbx/ice_thickness.jpg' );
+			var imgTexture = loader.load( 'models/fbx/white.jpg' );
+			var thicknessTexture = loader.load( 'models/fbx/bunny_thickness.jpg' );
 			imgTexture.wrapS = imgTexture.wrapT = THREE.RepeatWrapping;
 
 			var shader = new THREE.TranslucentShader();
@@ -127,16 +119,16 @@
 
 			uniforms[ 'map' ].value = imgTexture;
 
-			uniforms[ 'diffuse' ].value = new THREE.Vector3( .2, 0.2, 0.2 );
-			uniforms[ 'shininess' ].value = 25;
+			uniforms[ 'diffuse' ].value = new THREE.Vector3( 1.0, 0.2, 0.2 );
+			uniforms[ 'shininess' ].value = 500;
 
 			uniforms[ 'thicknessMap' ].value = thicknessTexture;
-			uniforms[ 'thicknessColor' ].value = new THREE.Vector3( 0.2, 0.24, 0.27 );
-			uniforms[ 'thicknessDistortion' ].value = 0.81;
-			uniforms[ 'thicknessAmbient' ].value = 7;
-			uniforms[ 'thicknessAttenuation' ].value = 2.3;
-			uniforms[ 'thicknessPower' ].value = 16.0;
-			uniforms[ 'thicknessScale' ].value = 1.0;
+			uniforms[ 'thicknessColor' ].value = new THREE.Vector3( 0.5, 0.3, 0.0 );
+			uniforms[ 'thicknessDistortion' ].value = 0.1;
+			uniforms[ 'thicknessAmbient' ].value = 0.4;
+			uniforms[ 'thicknessAttenuation' ].value = 0.8;
+			uniforms[ 'thicknessPower' ].value = 2.0;
+			uniforms[ 'thicknessScale' ].value = 16.0;
 
 			var material = new THREE.ShaderMaterial( {
 				uniforms: uniforms,
@@ -153,10 +145,8 @@
 
 				model = object.children[ 0 ];
 				model.position.set( 0, 0, 10 );
-				model.scale.setScalar( 2 );
+				model.scale.setScalar( 1 );
 				model.material = material;
-			    model.rotation.y = 1 + Math.PI
-			    model.rotation.z += .3 
 				scene.add( model );
 
 			} );
@@ -239,7 +229,7 @@
 
 		function render() {
 
-			//if ( model ) model.rotation.y = performance.now() / 5000;
+			if ( model ) model.rotation.y = performance.now() / 5000;
 
 			renderer.render( scene, camera );
 
