@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-	<title>three.js webgl - Fast subsurface scattering in Blinn-Phong shading demo</title>
+	<title>ice morph</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 	<style>
@@ -50,12 +50,15 @@
 
 		var container, stats;
 		var camera, scene, renderer;
-		var model;
+        var morph, small, large;
+        var mixers;
+        var clock = new THREE.Clock();
 
 		init();
-		animate();
 
 		function init() {
+            clock.start()
+            mixers = [];
 
 			container = document.createElement( 'div' );
 			document.body.appendChild( container );
@@ -90,9 +93,8 @@
             // BACKGRUND
             var geometry = new THREE.SphereGeometry( 2000, 10, 100 );
             var material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
-            var plane = new THREE.Mesh( geometry, material );
-            //plane.translateZ(-500)
-            scene.add( plane );
+            var mesh = new THREE.Mesh( geometry, material );
+            scene.add( mesh );
 
 			renderer = new THREE.WebGLRenderer( { antialias: true } );
 			renderer.setPixelRatio( window.devicePixelRatio );
@@ -125,6 +127,8 @@
 			var shader = new THREE.TranslucentShader();
 			var uniforms = THREE.UniformsUtils.clone( shader.uniforms );
 
+            var basicMaterial = new THREE.MeshBasicMaterial( {color: 0x000, side: THREE.DoubleSide} );
+
 			uniforms[ 'map' ].value = imgTexture;
 
 			uniforms[ 'diffuse' ].value = new THREE.Vector3( .2, 0.2, 0.2 );
@@ -148,22 +152,56 @@
 
 			// LOADER
 
+
 			var loader = new THREE.FBXLoader();
 			loader.load( 'models/fbx/ice7.fbx', function ( object ) {
 
-				model = object.children[ 0 ];
-				model.position.set( 0, 0, 10 );
-				model.scale.setScalar( 2 );
-				model.material = material;
-			    model.rotation.y = 1 + Math.PI
-			    model.rotation.z += .3 
-				scene.add( model );
+                /*
+                object.mixer = new THREE.AnimationMixer( object );
+                mixers.push( object.mixer );
+                var action = object.mixer.clipAction( object.animations[ 0 ] );
+                action.play();
+                */
+                object.scale.set(2,2,2)
 
+                object.traverse( function ( child ) {
+                    if ( child.isMesh ) {
+                      if ( child.name =='2') {
+                        small = child
+                      }
+                      else if ( child.name =='1') {
+                        large = child
+                      }
+                    }
+                } );
+
+                // Build Morph Mesh
+                morph = large.clone()
+                morph.geometry = large.geometry.clone()
+                morph.material = material
+                window.morph = morph
+                morph.castShadow = true;
+                morph.receiveShadow = true;
+
+				scene.add( morph );
+                animate()
 			} );
 
-			initGUI( uniforms );
+			//initGUI( uniforms );
 
 		}
+
+        function setMorphVertices(morph, meshA, meshB, ratio) {
+          // All inputs are buffer meshes
+          morph.geometry.attributes.position.needsUpdate = true
+          var vertsM = morph.geometry.attributes.position.array
+          var vertsA = meshA.geometry.attributes.position.array
+          var vertsB = meshB.geometry.attributes.position.array
+          var e = .001
+          for ( var i=0; i < vertsM.length ; i++) {
+            vertsM[i] = vertsA[i]*(ratio+e) + vertsB[i]*(1-ratio+e)
+          }
+        }
 
 		function initGUI( uniforms ) {
 
@@ -230,16 +268,24 @@
 		function animate() {
 
 			requestAnimationFrame( animate );
+            var r = Math.sin( clock.getElapsedTime() )
+            //var r = 1
+            setMorphVertices(morph, small, large, r)
+			stats.update();
+            if ( mixers.length > 0 ) {
+
+                for ( var i = 0; i < mixers.length; i ++ ) {
+                      mixers[ i ].update( clock.getDelta()*.5 );
+
+                  }
+
+              }
 
 			render();
-
-			stats.update();
-
 		}
 
 		function render() {
 
-			//if ( model ) model.rotation.y = performance.now() / 5000;
 
 			renderer.render( scene, camera );
 

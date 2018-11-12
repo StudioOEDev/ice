@@ -107,9 +107,7 @@
 
 				// model
 				var loader = new THREE.FBXLoader();
-                
 				loader.load( 'models/fbx/ice7.fbx', function ( object ) {
-
 					object.mixer = new THREE.AnimationMixer( object );
 					mixers.push( object.mixer );
 
@@ -124,14 +122,11 @@
                           child.castShadow = true;
                           child.receiveShadow = true;
                           if ( child.name!='1') {
-                            child.visible=false
+                            //child.visible=false
                           }
                           else {
                           }
-
-
 						}
-
 					} );
 
 					scene.add( object );
@@ -151,43 +146,6 @@
 				container.appendChild( stats.dom );
 
 			}
-
-          function initMaterial() {
-			var loader = new THREE.TextureLoader();
-			var imgTexture = loader.load( 'models/fbx/white.jpg' );
-			var thicknessTexture = loader.load( 'models/fbx/bunny_thickness.jpg' );
-			imgTexture.wrapS = imgTexture.wrapT = THREE.RepeatWrapping;
-			var shader = new THREE.TranslucentShader();
-			var uniforms = THREE.UniformsUtils.clone( shader.uniforms );
-			uniforms[ 'map' ].value = imgTexture;
-			uniforms[ 'diffuse' ].value = new THREE.Vector3( 1.0, 0.2, 0.2 );
-			uniforms[ 'shininess' ].value = 500;
-			uniforms[ 'thicknessMap' ].value = thicknessTexture;
-			uniforms[ 'thicknessColor' ].value = new THREE.Vector3( 0.5, 0.3, 0.0 );
-			uniforms[ 'thicknessDistortion' ].value = 0.1;
-			uniforms[ 'thicknessAmbient' ].value = 0.4;
-			uniforms[ 'thicknessAttenuation' ].value = 0.8;
-			uniforms[ 'thicknessPower' ].value = 2.0;
-			uniforms[ 'thicknessScale' ].value = 16.0;
-			var material = new THREE.ShaderMaterial( {
-				uniforms: uniforms,
-				vertexShader: shader.vertexShader,
-				fragmentShader: shader.fragmentShader,
-				lights: true
-			} );
-			material.extensions.derivatives = true;
-			// LOADER
-			var loader = new THREE.FBXLoader();
-			loader.load( 'models/fbx/ice7.fbx', function ( object ) {
-				model = object.children[ 0 ];
-				model.position.set( 0, 0, 10 );
-				model.scale.setScalar( 1 );
-				model.material = material;
-				scene.add( model );
-			} );
-			initGUI( uniforms );
-		}
-
 			function onWindowResize() {
 
 				camera.aspect = window.innerWidth / window.innerHeight;
