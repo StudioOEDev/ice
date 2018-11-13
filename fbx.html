@@ -1,182 +1,296 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js webgl - FBX loader</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				font-family: Monospace;
-				background-color: #000;
-				color: #fff;
-				margin: 0px;
-				overflow: hidden;
-			}
-			#info {
-				color: #fff;
-				position: absolute;
-				top: 10px;
-				width: 100%;
-				text-align: center;
-				z-index: 100;
-				display:block;
-			}
-			#info a {
-				color: #046;
-				font-weight: bold;
-			}
-		</style>
-	</head>
+  <head>
+	<title>ice morph</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+	  body {
+			color: #fff;
+			font-family: Monospace;
+			font-size: 13px;
+			text-align: center;
 
-	<body>
-		<div id="info">
-			<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> - FBXLoader<br />
-			Character and animation from <a href="https://www.mixamo.com/" target="_blank" rel="noopener">Mixamo</a>
-		</div>
+			background-color: #fff;
+			margin: 0px;
+			overflow: hidden;
+	  }
 
-		<script src="js/build/three.js"></script>
+	  #info {
+			position: absolute;
+			top: 0px; width: 100%;
+			padding: 5px;
+	  }
+	</style>
+  </head>
+  <body>
 
-		<script src="js/libs/inflate.min.js"></script>
-		<script src="js/loaders/FBXLoader.js"></script>
+	<div id="container"></div>
+	<div id="info"><a href="http://threejs.org" target="_blank" rel="noopener">three.js</a>
+		<br/>Fast subsurface scattering in Blinn-Phong shading demo<br/>
+		[Thanks for the art support from <a href="https://github.com/shaochun" target="_blank" rel="noopener">Shaochun Lin</a>]
+	</div>
+	<script src="js/build/three.js"></script>
+	<script src="js/controls/OrbitControls.js"></script>
 
-		<script src="js/controls/OrbitControls.js"></script>
+	<script src="js/WebGL.js"></script>
+	<script src="js/libs/stats.min.js"></script>
+	<script src="js/libs/inflate.min.js"></script>
+	<script src="js/libs/dat.gui.min.js"></script>
+	<script src="js/loaders/FBXLoader.js"></script>
+	<script src="js/ShaderTranslucent.js"></script>
 
-		<script src="js/WebGL.js"></script>
-		<script src="js/ShaderTranslucent.js"></script>
-		<script src="js/libs/stats.min.js"></script>
+	<script>
 
-		<script>
+		if ( WEBGL.isWebGLAvailable() === false ) {
 
-			if ( WEBGL.isWebGLAvailable() === false ) {
+			document.body.appendChild( WEBGL.getWebGLErrorMessage() );
 
-				document.body.appendChild( WEBGL.getWebGLErrorMessage() );
+		}
 
-			}
+		var container, stats;
+		var camera, scene, renderer;
+        var morph, small, large;
+        var mixers;
+        var clock = new THREE.Clock();
 
-			var container, stats, controls;
-			var camera, scene, renderer, light;
+		init();
 
-			var clock = new THREE.Clock();
+		function init() {
+            clock.start()
+            mixers = [];
 
-			var mixers = [];
+			container = document.createElement( 'div' );
+			document.body.appendChild( container );
 
-			init();
-			animate();
+			camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 5000 );
+			camera.position.set( 0.0, 300, 400 * 4 );
 
-			function init() {
+			scene = new THREE.Scene();
 
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
+			// Lights
 
-				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
-				camera.position.set( 100, 200, 300 );
+			scene.add( new THREE.AmbientLight( 0x888888 ) );
 
-				controls = new THREE.OrbitControls( camera );
-				controls.target.set( 0, 100, 0 );
-				controls.update();
+			var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.2 );
+			directionalLight.position.set( 0.0, 0.5, 0.5 ).normalize();
+			scene.add( directionalLight );
 
-				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0xa0a0a0 );
-				scene.fog = new THREE.Fog( 0xa0a0a0, 200, 1000 );
+			var pointLight1 = new THREE.Mesh( new THREE.SphereBufferGeometry( 1, 1, 1 ), new THREE.MeshBasicMaterial( { color: 0x888888 } ) );
+			pointLight1.add( new THREE.PointLight( 0x888888, 1.0, 300 ) );
+			scene.add( pointLight1 );
+			pointLight1.position.x = 0;
+			pointLight1.position.y =  250;
+			pointLight1.position.z = 350;
 
-				light = new THREE.HemisphereLight( 0xffffff, 0x444444 );
-				light.position.set( 0, 200, 0 );
-				scene.add( light );
+			var pointLight2 = new THREE.Mesh( new THREE.SphereBufferGeometry( 1, 1, 1 ), new THREE.MeshBasicMaterial( { color: 0x888888 } ) );
+			pointLight2.add( new THREE.PointLight( 0x888888, 1.0, 500 ) );
+			scene.add( pointLight2 );
+			pointLight2.position.x = - 100;
+			pointLight2.position.y = 220;
+			pointLight2.position.z = - 260;
 
-				light = new THREE.DirectionalLight( 0xffffff );
-				light.position.set( 0, 200, 100 );
-				light.castShadow = true;
-				light.shadow.camera.top = 180;
-				light.shadow.camera.bottom = - 100;
-				light.shadow.camera.left = - 120;
-				light.shadow.camera.right = 120;
-				scene.add( light );
+            // BACKGRUND
+            var geometry = new THREE.SphereGeometry( 2000, 10, 100 );
+            var material = new THREE.MeshBasicMaterial( {color: 0x555555, side: THREE.DoubleSide} );
+            var mesh = new THREE.Mesh( geometry, material );
+            scene.add( mesh );
 
-				// scene.add( new THREE.CameraHelper( light.shadow.camera ) );
+			renderer = new THREE.WebGLRenderer( { antialias: true } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			container.appendChild( renderer.domElement );
 
-				// ground
-				var mesh = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2000, 2000 ), new THREE.MeshPhongMaterial( { color: 0x999999, depthWrite: false } ) );
-				mesh.rotation.x = - Math.PI / 2;
-				mesh.receiveShadow = true;
-				scene.add( mesh );
-
-				var grid = new THREE.GridHelper( 2000, 20, 0x000000, 0x000000 );
-				grid.material.opacity = 0.2;
-				grid.material.transparent = true;
-				scene.add( grid );
-
-				// model
-				var loader = new THREE.FBXLoader();
-				loader.load( 'models/fbx/ice7.fbx', function ( object ) {
-					object.mixer = new THREE.AnimationMixer( object );
-					mixers.push( object.mixer );
-
-					var action = object.mixer.clipAction( object.animations[ 0 ] );
-					action.play();
-
-					object.traverse( function ( child ) {
-
-						if ( child.isMesh ) {
-                          console.log(child)
-                          // for cube1.fbx
-                          child.castShadow = true;
-                          child.receiveShadow = true;
-                          if ( child.name!='1') {
-                            //child.visible=false
-                          }
-                          else {
-                          }
-						}
-					} );
-
-					scene.add( object );
-
-				} );
-
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				//renderer.shadowMap.enabled = true;
-				container.appendChild( renderer.domElement );
-
-				window.addEventListener( 'resize', onWindowResize, false );
-
-				// stats
-				stats = new Stats();
-				container.appendChild( stats.dom );
-
-			}
-			function onWindowResize() {
-
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-
-				renderer.setSize( window.innerWidth, window.innerHeight );
-
-			}
+			renderer.gammaInput = true;
+			renderer.gammaOutput = true;
 
 			//
 
-			function animate() {
+			stats = new Stats();
+			container.appendChild( stats.dom );
 
-				requestAnimationFrame( animate );
+			var controls = new THREE.OrbitControls( camera, container );
 
-				if ( mixers.length > 0 ) {
+			window.addEventListener( 'resize', onWindowResize, false );
 
-					for ( var i = 0; i < mixers.length; i ++ ) {
-						mixers[ i ].update( clock.getDelta()*.5 );
+			initMaterial();
 
-					}
+		}
 
-				}
+		function initMaterial() {
 
-				renderer.render( scene, camera );
+			var loader = new THREE.TextureLoader();
+			var imgTexture = loader.load( 'models/fbx/white.jpg' );
+			var thicknessTexture = loader.load( 'models/fbx/white.jpg' );
+			imgTexture.wrapS = imgTexture.wrapT = THREE.RepeatWrapping;
 
-				stats.update();
+			var shader = new THREE.TranslucentShader();
+			var uniforms = THREE.UniformsUtils.clone( shader.uniforms );
 
-			}
+			uniforms[ 'map' ].value = imgTexture;
 
-		</script>
+			uniforms[ 'diffuse' ].value = new THREE.Vector3( .2, 0.2, 0.2 );
+			uniforms[ 'shininess' ].value = 25;
 
-	</body>
+			uniforms[ 'thicknessMap' ].value = thicknessTexture;
+			uniforms[ 'thicknessColor' ].value = new THREE.Vector3( 0.2, 0.24, 0.27 );
+			uniforms[ 'thicknessDistortion' ].value = 0.81;
+			uniforms[ 'thicknessAmbient' ].value = 4;
+			uniforms[ 'thicknessAttenuation' ].value = 2.3;
+			uniforms[ 'thicknessPower' ].value = 10.0;
+			uniforms[ 'thicknessScale' ].value = 1.0;
+
+			var material = new THREE.ShaderMaterial( {
+				uniforms: uniforms,
+				vertexShader: shader.vertexShader,
+				fragmentShader: shader.fragmentShader,
+				lights: true
+			} );
+            material.transparent = true;
+			material.extensions.derivatives = true;
+
+			// LOADER
+
+
+			var loader = new THREE.FBXLoader();
+			loader.load( 'models/fbx/babybeige.fbx', function ( object ) {
+
+                /*
+                object.mixer = new THREE.AnimationMixer( object );
+                mixers.push( object.mixer );
+                var action = object.mixer.clipAction( object.animations[ 0 ] );
+                action.play();
+                */
+                object.scale.set(2,2,2)
+
+                object.traverse( function ( child ) {
+                    if ( child.isMesh ) {
+                      if ( child.name =='2') {
+                        small = child
+                      }
+                      else if ( child.name =='1') {
+                        large = child
+                      }
+                    }
+                } );
+
+                // Build Morph Mesh
+                morph = large.clone()
+                morph.geometry = large.geometry.clone()
+                morph.material = material
+                window.morph = morph
+                morph.castShadow = true;
+                morph.receiveShadow = true;
+
+				scene.add( morph );
+                animate()
+			} );
+
+			//initGUI( uniforms );
+
+		}
+
+        function setMorphVertices(morph, meshA, meshB, ratio) {
+          // All inputs are buffer meshes
+          morph.geometry.attributes.position.needsUpdate = true
+          var vertsM = morph.geometry.attributes.position.array
+          var vertsA = meshA.geometry.attributes.position.array
+          var vertsB = meshB.geometry.attributes.position.array
+          var e = .001
+          for ( var i=0; i < vertsM.length ; i++) {
+            vertsM[i] = vertsA[i]*(ratio+e) + vertsB[i]*(1-ratio+e)
+          }
+        }
+
+		function initGUI( uniforms ) {
+
+			var gui = new dat.GUI();
+
+			var ThicknessControls = function () {
+
+				this.distoration = uniforms[ 'thicknessDistortion' ].value;
+				this.ambient = uniforms[ 'thicknessAmbient' ].value;
+				this.attenuation = uniforms[ 'thicknessAttenuation' ].value;
+				this.power = uniforms[ 'thicknessPower' ].value;
+				this.scale = uniforms[ 'thicknessScale' ].value;
+
+			};
+
+			var thicknessControls = new ThicknessControls();
+			var thicknessFolder = gui.addFolder( 'Thickness Control' );
+
+			thicknessFolder.add( thicknessControls, 'distoration' ).min( 0.01 ).max( 1 ).step( 0.01 ).onChange( function () {
+
+				uniforms[ 'thicknessDistortion' ].value = thicknessControls.distoration;
+
+			} );
+
+			thicknessFolder.add( thicknessControls, 'ambient' ).min( 0.01 ).max( 5.0 ).step( 0.05 ).onChange( function () {
+
+				uniforms[ 'thicknessAmbient' ].value = thicknessControls.ambient;
+
+			} );
+
+			thicknessFolder.add( thicknessControls, 'attenuation' ).min( 0.01 ).max( 5.0 ).step( 0.05 ).onChange( function () {
+
+				uniforms[ 'thicknessAttenuation' ].value = thicknessControls.attenuation;
+
+			} );
+
+			thicknessFolder.add( thicknessControls, 'power' ).min( 0.01 ).max( 16.0 ).step( 0.1 ).onChange( function () {
+
+				uniforms[ 'thicknessPower' ].value = thicknessControls.power;
+
+			} );
+
+			thicknessFolder.add( thicknessControls, 'scale' ).min( 0.01 ).max( 50.0 ).step( 0.1 ).onChange( function () {
+
+				uniforms[ 'thicknessScale' ].value = thicknessControls.scale;
+
+			} );
+
+			thicknessFolder.open();
+
+		}
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+		}
+
+		//
+
+		function animate() {
+
+			requestAnimationFrame( animate );
+            var r = Math.sin( clock.getElapsedTime() )
+            //var r = 1
+            setMorphVertices(morph, small, large, r)
+			stats.update();
+            if ( mixers.length > 0 ) {
+
+                for ( var i = 0; i < mixers.length; i ++ ) {
+                      mixers[ i ].update( clock.getDelta()*.5 );
+
+                  }
+
+              }
+
+			render();
+		}
+
+		function render() {
+
+
+			renderer.render( scene, camera );
+
+		}
+
+	</script>
+
+  </body>
 </html>
